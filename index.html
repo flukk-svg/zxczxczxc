@@ -1,0 +1,1572 @@
+<!doctype html>
+<html lang="th">
+ <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ระบบเช็คสต๊อกและบันทึกการขาย</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #f0f4f8;
+      color: #1a202c;
+      height: 100%;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    .app-container {
+      width: 100%;
+      min-height: 100%;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Navigation */
+    .navbar {
+      background: #2d3748;
+      color: white;
+      padding: 1rem 2rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .navbar-brand {
+      font-size: 1.5rem;
+      font-weight: bold;
+    }
+
+    .navbar-menu {
+      display: flex;
+      gap: 1rem;
+    }
+
+    .nav-btn {
+      background: transparent;
+      color: white;
+      border: none;
+      padding: 0.5rem 1rem;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 1rem;
+      transition: background 0.3s;
+    }
+
+    .nav-btn:hover {
+      background: #4a5568;
+    }
+
+    .nav-btn.active {
+      background: #4299e1;
+    }
+
+    /* Main Content */
+    .main-content {
+      flex: 1;
+      padding: 2rem;
+      max-width: 1400px;
+      margin: 0 auto;
+      width: 100%;
+    }
+
+    .page {
+      display: none;
+    }
+
+    .page.active {
+      display: block;
+    }
+
+    /* Cards */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 1.5rem;
+      margin-bottom: 2rem;
+    }
+
+    .stat-card {
+      background: white;
+      padding: 1.5rem;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+
+    .stat-card h3 {
+      margin: 0 0 0.5rem 0;
+      font-size: 0.875rem;
+      color: #718096;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .stat-card .value {
+      font-size: 2rem;
+      font-weight: bold;
+      color: #2d3748;
+    }
+
+    .stat-card.profit .value {
+      color: #48bb78;
+    }
+
+    .stat-card.revenue .value {
+      color: #4299e1;
+    }
+
+    /* Alert */
+    .alert-box {
+      background: #fff5f5;
+      border-left: 4px solid #fc8181;
+      padding: 1rem;
+      margin-bottom: 1.5rem;
+      border-radius: 6px;
+    }
+
+    .alert-box h4 {
+      margin: 0 0 0.5rem 0;
+      color: #c53030;
+    }
+
+    .alert-item {
+      padding: 0.5rem 0;
+      color: #742a2a;
+    }
+
+    /* Forms */
+    .form-card {
+      background: white;
+      padding: 2rem;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      margin-bottom: 2rem;
+    }
+
+    .form-card h2 {
+      margin: 0 0 1.5rem 0;
+      color: #2d3748;
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1rem;
+      margin-bottom: 1rem;
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .form-group label {
+      margin-bottom: 0.5rem;
+      font-weight: 500;
+      color: #4a5568;
+    }
+
+    .form-group input,
+    .form-group select {
+      padding: 0.75rem;
+      border: 1px solid #cbd5e0;
+      border-radius: 6px;
+      font-size: 1rem;
+      transition: border-color 0.3s;
+    }
+
+    .form-group input:focus,
+    .form-group select:focus {
+      outline: none;
+      border-color: #4299e1;
+    }
+
+    /* Buttons */
+    .btn {
+      padding: 0.75rem 1.5rem;
+      border: none;
+      border-radius: 6px;
+      font-size: 1rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.3s;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .btn-primary {
+      background: #4299e1;
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background: #3182ce;
+    }
+
+    .btn-success {
+      background: #48bb78;
+      color: white;
+    }
+
+    .btn-success:hover {
+      background: #38a169;
+    }
+
+    .btn-danger {
+      background: #f56565;
+      color: white;
+      padding: 0.5rem 1rem;
+    }
+
+    .btn-danger:hover {
+      background: #e53e3e;
+    }
+
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    /* Tables */
+    .table-container {
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      overflow: hidden;
+    }
+
+    .table-header {
+      padding: 1.5rem;
+      border-bottom: 1px solid #e2e8f0;
+    }
+
+    .table-header h2 {
+      margin: 0;
+      color: #2d3748;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    thead {
+      background: #edf2f7;
+    }
+
+    th {
+      padding: 1rem;
+      text-align: left;
+      font-weight: 600;
+      color: #4a5568;
+      text-transform: uppercase;
+      font-size: 0.75rem;
+      letter-spacing: 0.05em;
+    }
+
+    td {
+      padding: 1rem;
+      border-top: 1px solid #e2e8f0;
+    }
+
+    tbody tr:hover {
+      background: #f7fafc;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 0.25rem 0.75rem;
+      border-radius: 12px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+
+    .badge-danger {
+      background: #fed7d7;
+      color: #c53030;
+    }
+
+    .badge-success {
+      background: #c6f6d5;
+      color: #2f855a;
+    }
+
+    .badge-warning {
+      background: #feebc8;
+      color: #c05621;
+    }
+
+    /* Chart */
+    .chart-container {
+      background: white;
+      padding: 2rem;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      margin-bottom: 2rem;
+    }
+
+    .chart-container h2 {
+      margin: 0 0 1.5rem 0;
+      color: #2d3748;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 3rem;
+      color: #718096;
+    }
+
+    .empty-state-icon {
+      font-size: 3rem;
+      margin-bottom: 1rem;
+    }
+
+    .loading {
+      display: inline-block;
+      width: 1rem;
+      height: 1rem;
+      border: 2px solid #fff;
+      border-top-color: transparent;
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .navbar {
+        flex-direction: column;
+        gap: 1rem;
+      }
+
+      .navbar-menu {
+        width: 100%;
+        justify-content: center;
+      }
+
+      .main-content {
+        padding: 1rem;
+      }
+
+      .stats-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .form-grid {
+        grid-template-columns: 1fr;
+      }
+
+      table {
+        font-size: 0.875rem;
+      }
+
+      th, td {
+        padding: 0.5rem;
+      }
+    }
+  </style>
+  <style>@view-transition { navigation: auto; }</style>
+  <script src="https://cdn.tailwindcss.com" type="text/javascript"></script>
+ </head>
+ <body>
+  <div class="app-container"><nav class="navbar">
+    <div class="navbar-brand" id="app-title">
+     ระบบเช็คสต๊อกและบันทึกการขาย
+    </div>
+    <div class="navbar-menu"><button class="nav-btn active" onclick="showPage('dashboard')">📊 Dashboard</button> <button class="nav-btn" onclick="showPage('products')">📦 จัดการสินค้า</button> <button class="nav-btn" onclick="showPage('sales')">💰 บันทึกการขาย</button>
+    </div>
+   </nav><main class="main-content"><div id="dashboard-page" class="page active">
+     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+      <h1 id="dashboard-title" style="margin: 0;">Dashboard รายงานประจำเดือน</h1>
+      <div style="display: flex; gap: 1rem;"><button class="btn btn-success" onclick="exportToExcel()" style="display: flex; align-items: center; gap: 0.5rem;"> 📊 ส่งออก Excel </button> <button class="btn btn-primary" onclick="exportToPDF()" style="display: flex; align-items: center; gap: 0.5rem;"> 📄 ส่งออก PDF </button>
+      </div>
+     </div><div class="stats-grid">
+      <div class="stat-card revenue">
+       <h3>รายรับรวม</h3>
+       <div class="value" id="total-revenue">
+        ฿0
+       </div>
+      </div>
+      <div class="stat-card">
+       <h3>ต้นทุนรวม</h3>
+       <div class="value" id="total-cost">
+        ฿0
+       </div>
+      </div>
+      <div class="stat-card profit">
+       <h3>กำไรขั้นต้น</h3>
+       <div class="value" id="total-profit">
+        ฿0
+       </div>
+      </div>
+      <div class="stat-card">
+       <h3>รายการขาย</h3>
+       <div class="value" id="total-sales-count">
+        0
+       </div>
+      </div>
+     </div><div id="low-stock-alert" style="display: none;">
+      <div class="alert-box">
+       <h4>⚠️ แจ้งเตือน: สินค้าสต๊อกใกล้หมด</h4>
+       <div id="low-stock-list"></div>
+      </div>
+     </div><div class="chart-container">
+      <h2>กราฟยอดขายรายวัน (30 วันล่าสุด)</h2>
+      <canvas id="salesChart"></canvas>
+     </div><div class="table-container">
+      <div class="table-header">
+       <h2>สินค้าขายดี Top 10</h2>
+      </div>
+      <table>
+       <thead>
+        <tr>
+         <th>ลำดับ</th>
+         <th>สินค้า</th>
+         <th>จำนวนขาย</th>
+         <th>ยอดขาย</th>
+         <th>กำไร</th>
+         <th>สถานะ</th>
+        </tr>
+       </thead>
+       <tbody id="top-products-body">
+        <tr>
+         <td colspan="6" class="empty-state">
+          <div class="empty-state-icon">
+           📊
+          </div>
+          <div>
+           ยังไม่มีข้อมูลการขาย
+          </div></td>
+        </tr>
+       </tbody>
+      </table>
+     </div>
+    </div><div id="products-page" class="page">
+     <h1 id="products-title">จัดการสินค้า</h1><div class="form-card" style="margin-bottom: 1.5rem;">
+      <div style="display: flex; gap: 1rem; align-items: center;">
+       <div class="form-group" style="flex: 1; margin: 0;"><label for="search-product">🔍 ค้นหาสินค้า</label> <input type="text" id="search-product" placeholder="ค้นหาจากชื่อสินค้า..." oninput="searchProducts()" style="width: 100%;">
+       </div><button class="btn" style="background: #e2e8f0; color: #2d3748; margin-top: 1.8rem;" onclick="clearSearch()"> ล้างการค้นหา </button>
+      </div>
+      <div id="search-results" style="margin-top: 1rem; color: #718096; font-size: 0.875rem;"></div>
+     </div><div class="form-card">
+      <h2 id="form-mode-title">เพิ่มสินค้าใหม่</h2>
+      <form id="product-form" onsubmit="handleProductSubmit(event)"><input type="hidden" id="edit-product-id">
+       <div class="form-grid">
+        <div class="form-group"><label for="product-name">ชื่อสินค้า *</label> <input type="text" id="product-name" required>
+        </div>
+        <div class="form-group"><label for="product-price">ราคาขาย (฿) *</label> <input type="number" id="product-price" step="0.01" min="0" required>
+        </div>
+        <div class="form-group"><label for="product-cost">ต้นทุน (฿) *</label> <input type="number" id="product-cost" step="0.01" min="0" required>
+        </div>
+        <div class="form-group"><label for="product-stock">จำนวนคงเหลือ *</label> <input type="number" id="product-stock" min="0" required>
+        </div>
+        <div class="form-group"><label for="product-min-stock">สต๊อกขั้นต่ำ *</label> <input type="number" id="product-min-stock" min="0" required>
+        </div>
+        <div class="form-group"><label for="product-image">URL รูปภาพ</label> <input type="url" id="product-image" placeholder="https://example.com/image.jpg">
+        </div>
+       </div>
+       <div style="margin-top: 1rem; display: flex; gap: 1rem;"><button type="submit" class="btn btn-primary" id="submit-btn"> <span id="submit-text">เพิ่มสินค้า</span> </button> <button type="button" class="btn" style="background: #e2e8f0; color: #2d3748;" onclick="cancelEdit()">ยกเลิก</button>
+       </div>
+      </form>
+     </div><div class="table-container">
+      <div class="table-header">
+       <h2>รายการสินค้าทั้งหมด</h2>
+      </div>
+      <table>
+       <thead>
+        <tr>
+         <th>รูปภาพ</th>
+         <th>ชื่อสินค้า</th>
+         <th>ราคาขาย</th>
+         <th>ต้นทุน</th>
+         <th>คงเหลือ</th>
+         <th>สต๊อกขั้นต่ำ</th>
+         <th>สถานะ</th>
+         <th>การจัดการ</th>
+        </tr>
+       </thead>
+       <tbody id="products-table-body">
+        <tr>
+         <td colspan="8" class="empty-state">
+          <div class="empty-state-icon">
+           📦
+          </div>
+          <div>
+           ยังไม่มีสินค้า กรุณาเพิ่มสินค้าใหม่
+          </div></td>
+        </tr>
+       </tbody>
+      </table>
+     </div>
+    </div><div id="sales-page" class="page">
+     <h1 id="sales-title">บันทึกการขายประจำวัน</h1><div class="form-card">
+      <h2>บันทึกการขายใหม่</h2>
+      <form id="sales-form" onsubmit="handleSalesSubmit(event)">
+       <div class="form-grid">
+        <div class="form-group"><label for="sale-product">เลือกสินค้า *</label> <select id="sale-product" required onchange="updateSaleInfo()"> <option value="">-- เลือกสินค้า --</option> </select>
+        </div>
+        <div class="form-group"><label for="sale-quantity">จำนวนที่ขาย *</label> <input type="number" id="sale-quantity" min="1" required onchange="updateSaleInfo()">
+        </div>
+       </div>
+       <div id="sale-info" style="background: #edf2f7; padding: 1rem; border-radius: 6px; margin: 1rem 0; display: none;">
+        <p style="margin: 0.5rem 0;"><strong>ราคาขาย:</strong> <span id="info-price">฿0</span></p>
+        <p style="margin: 0.5rem 0;"><strong>ยอดรวม:</strong> <span id="info-total">฿0</span></p>
+        <p style="margin: 0.5rem 0;"><strong>กำไร:</strong> <span id="info-profit" style="color: #48bb78;">฿0</span></p>
+        <p style="margin: 0.5rem 0;"><strong>สต๊อกคงเหลือ:</strong> <span id="info-stock">0</span></p>
+       </div><button type="submit" class="btn btn-success" id="sale-submit-btn"> <span id="sale-submit-text">บันทึกการขาย</span> </button>
+      </form>
+     </div><div class="table-container">
+      <div class="table-header">
+       <h2>ประวัติการขาย (30 วันล่าสุด)</h2>
+      </div>
+      <table>
+       <thead>
+        <tr>
+         <th>วันที่</th>
+         <th>สินค้า</th>
+         <th>จำนวน</th>
+         <th>ยอดขาย</th>
+         <th>ต้นทุน</th>
+         <th>กำไร</th>
+        </tr>
+       </thead>
+       <tbody id="sales-table-body">
+        <tr>
+         <td colspan="6" class="empty-state">
+          <div class="empty-state-icon">
+           💰
+          </div>
+          <div>
+           ยังไม่มีการขาย
+          </div></td>
+        </tr>
+       </tbody>
+      </table>
+     </div>
+    </div>
+   </main>
+  </div>
+  <script>
+    // Configuration
+    const defaultConfig = {
+      app_title: "ระบบเช็คสต๊อกและบันทึกการขาย",
+      dashboard_title: "Dashboard รายงานประจำเดือน",
+      products_title: "จัดการสินค้า",
+      sales_title: "บันทึกการขายประจำวัน",
+      background_color: "#f0f4f8",
+      nav_color: "#2d3748",
+      primary_color: "#4299e1",
+      success_color: "#48bb78",
+      danger_color: "#f56565"
+    };
+
+    // Global state
+    let allData = [];
+    let products = [];
+    let sales = [];
+    let currentPage = 'dashboard';
+    let editingProductId = null;
+    let salesChart = null;
+    let filteredProducts = [];
+    
+    // *** NEW: Apps Script Configuration ***
+    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyqYqyP6Jvx3d8Lqqj0zqKJnQVvNiS46Ffoa52q_Gr0CFZ0VBj5291LgNVcmRZOMsjNxQ/exec'; // <--- คัดลอก URL ที่ได้จากขั้นตอน 1.4 มาใส่ตรงนี้
+
+    // NEW: Utility function to handle Fetch API (POST for CRUD)
+    async function postData(action, data) {
+      const formData = new FormData();
+      formData.append('action', action);
+      
+      // แปลง Object data เป็น FormData items
+      for (const key in data) {
+        // GAS Apps Script ใช้ FormData ใน doPost(e).parameter
+        formData.append(key, data[key]);
+      }
+      
+      try {
+        const response = await fetch(SCRIPT_URL, {
+          method: 'POST',
+          body: formData
+        });
+        const result = await response.json();
+        
+        if (result.isOk === false) {
+          throw new Error(result.error || 'Server reported error.');
+        }
+        return { isOk: true }; // ส่งคืน Object ที่มีรูปแบบเดียวกับ Canva SDK เดิม
+      } catch (error) {
+        console.error("Fetch/API Error:", error);
+        showToast(`เกิดข้อผิดพลาดในการเชื่อมต่อ: ${error.message}`, 'error');
+        return { isOk: false, error: error.message };
+      }
+    }
+
+    // NEW Data Handler (แทนที่ dataHandler เดิม)
+    const dataHandler = {
+      // ฟังก์ชันใหม่สำหรับดึงข้อมูลและอัปเดต Global State
+      async fetchData() {
+        try {
+          // ส่ง GET request ไปยัง Apps Script (doGet)
+          const response = await fetch(SCRIPT_URL); 
+          const result = await response.json();
+          
+          if (result.isOk === false) {
+            throw new Error(result.error || 'Failed to fetch data.');
+          }
+
+          const data = result.filter(item => item.id); // กรองข้อมูลที่ไม่มี ID
+          
+          allData = data;
+          products = data.filter(item => item.type === 'product');
+          sales = data.filter(item => item.type === 'sale');
+          
+          // เรียกฟังก์ชันเรนเดอร์ทั้งหมด
+          renderProductsTable();
+          renderSalesTable();
+          renderDashboard();
+          updateSalesProductSelect();
+          
+        } catch (error) {
+          console.error("Error fetching data:", error);
+          showToast(`ไม่สามารถดึงข้อมูลได้: ${error.message}`, 'error');
+        }
+      }
+    };
+    
+    // Initialize App (แทนที่ initApp เดิมและลบ Element SDK)
+    async function initApp() {
+        // โหลดข้อมูลเริ่มต้น
+        await dataHandler.fetchData(); 
+    }
+
+    // Page Navigation
+    function showPage(pageName) {
+      currentPage = pageName;
+      
+      document.querySelectorAll('.page').forEach(page => page.classList.remove('active'));
+      document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
+      
+      document.getElementById(`${pageName}-page`).classList.add('active');
+      event.target.classList.add('active');
+    }
+
+    // Products Functions
+    async function handleProductSubmit(event) {
+      event.preventDefault();
+      
+      const submitBtn = document.getElementById('submit-btn');
+      const submitText = document.getElementById('submit-text');
+      const originalText = submitText.textContent;
+      
+      submitBtn.disabled = true;
+      submitText.innerHTML = '<span class="loading"></span> กำลังบันทึก...';
+      
+      const productData = {
+        type: 'product',
+        name: document.getElementById('product-name').value,
+        price: parseFloat(document.getElementById('product-price').value),
+        cost: parseFloat(document.getElementById('product-cost').value),
+        stock: parseInt(document.getElementById('product-stock').value),
+        minStock: parseInt(document.getElementById('product-min-stock').value),
+        imageUrl: document.getElementById('product-image').value || '',
+        createdAt: new Date().toISOString()
+      };
+      
+      let result;
+      if (editingProductId) {
+        // *** CHANGE: Use postData for Update ***
+        result = await postData('update', { id: editingProductId, ...productData });
+      } else {
+        // *** CHANGE: Use postData for Create, generate ID locally ***
+        productData.id = 'product_' + Date.now();
+        result = await postData('create', productData);
+      }
+      
+      submitBtn.disabled = false;
+      submitText.textContent = originalText;
+      
+      if (result.isOk) {
+        document.getElementById('product-form').reset();
+        cancelEdit();
+        showToast(editingProductId ? 'แก้ไขสินค้าสำเร็จ' : 'เพิ่มสินค้าสำเร็จ', 'success');
+        await dataHandler.fetchData(); // *** NEW: Fetch data to update UI ***
+      } else {
+        // Error handling ถูกรวมอยู่ใน postData แล้ว (ถ้าต้องการปรับแก้)
+        showToast('เกิดข้อผิดพลาด กรุณาลองใหม่', 'error');
+      }
+    }
+
+    function editProduct(productId) {
+      const product = products.find(p => p.id === productId);
+      if (!product) return;
+      
+      editingProductId = productId;
+      document.getElementById('form-mode-title').textContent = 'แก้ไขสินค้า';
+      document.getElementById('edit-product-id').value = productId;
+      document.getElementById('product-name').value = product.name;
+      document.getElementById('product-price').value = product.price;
+      document.getElementById('product-cost').value = product.cost;
+      document.getElementById('product-stock').value = product.stock;
+      document.getElementById('product-min-stock').value = product.minStock;
+      document.getElementById('product-image').value = product.imageUrl || '';
+      document.getElementById('submit-text').textContent = 'บันทึกการแก้ไข';
+      
+      document.getElementById('product-form').scrollIntoView({ behavior: 'smooth' });
+    }
+
+    function cancelEdit() {
+      editingProductId = null;
+      document.getElementById('form-mode-title').textContent = 'เพิ่มสินค้าใหม่';
+      document.getElementById('edit-product-id').value = '';
+      document.getElementById('submit-text').textContent = 'เพิ่มสินค้า';
+      document.getElementById('product-form').reset();
+    }
+
+    async function deleteProduct(productId) {
+      const product = products.find(p => p.id === productId);
+      if (!product) return;
+      
+      const confirmBtn = event.target;
+      const originalText = confirmBtn.textContent;
+      
+      if (confirmBtn.textContent === 'ยืนยันลบ?') {
+        confirmBtn.disabled = true;
+        confirmBtn.textContent = 'กำลังลบ...';
+        
+        // *** CHANGE: Use postData for Delete ***
+        const result = await postData('delete', { id: productId, type: product.type });
+        
+        if (result.isOk) {
+          showToast('ลบสินค้าสำเร็จ', 'success');
+          await dataHandler.fetchData(); // *** NEW: Fetch data to update UI ***
+        } else {
+          confirmBtn.disabled = false;
+          confirmBtn.textContent = originalText;
+          showToast('เกิดข้อผิดพลาด กรุณาลองใหม่', 'error');
+        }
+      } else {
+        confirmBtn.textContent = 'ยืนยันลบ?';
+        setTimeout(() => {
+          confirmBtn.textContent = originalText;
+        }, 3000);
+      }
+    }
+
+    function renderProductsTable() {
+      const tbody = document.getElementById('products-table-body');
+      const displayProducts = filteredProducts.length > 0 || document.getElementById('search-product')?.value 
+        ? filteredProducts 
+        : products;
+      
+      if (products.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="8" class="empty-state">
+              <div class="empty-state-icon">📦</div>
+              <div>ยังไม่มีสินค้า กรุณาเพิ่มสินค้าใหม่</div>
+            </td>
+          </tr>
+        `;
+        return;
+      }
+      
+      if (displayProducts.length === 0 && document.getElementById('search-product')?.value) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="8" class="empty-state">
+              <div class="empty-state-icon">🔍</div>
+              <div>ไม่พบสินค้าที่ค้นหา</div>
+            </td>
+          </tr>
+        `;
+        return;
+      }
+      
+      tbody.innerHTML = displayProducts.map(product => {
+        const isLowStock = product.stock <= product.minStock;
+        const hasSales = sales.some(sale => sale.productId === product.id);
+        
+        return `
+          <tr>
+            <td>
+              ${product.imageUrl ? 
+                `<img src="${product.imageUrl}" alt="${product.name}" style="width: 50px; height: 50px; object-fit: cover; border-radius: 6px;" onerror="this.src=''; this.alt='❌'; this.style.fontSize='2rem';">` : 
+                '<span style="font-size: 2rem;">📦</span>'}
+            </td>
+            <td><strong>${product.name}</strong></td>
+            <td>฿${product.price.toFixed(2)}</td>
+            <td>฿${product.cost.toFixed(2)}</td>
+            <td><strong>${product.stock}</strong></td>
+            <td>${product.minStock}</td>
+            <td>
+              ${isLowStock ? '<span class="badge badge-danger">สต๊อกต่ำ</span>' : '<span class="badge badge-success">ปกติ</span>'}
+              ${hasSales ? '<span class="badge badge-success">ขายแล้ว</span>' : '<span class="badge badge-warning">ยังไม่ขาย</span>'}
+            </td>
+            <td>
+              <button class="btn btn-primary" style="padding: 0.5rem 1rem; margin-right: 0.5rem;" onclick="editProduct('${product.id}')">แก้ไข</button>
+              <button class="btn btn-danger" onclick="deleteProduct('${product.id}')">ลบ</button>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    // Sales Functions
+    function updateSalesProductSelect() {
+      const select = document.getElementById('sale-product');
+      const currentValue = select.value;
+      
+      select.innerHTML = '<option value="">-- เลือกสินค้า --</option>' +
+        products
+          .filter(p => p.stock > 0)
+          .map(p => `<option value="${p.id}">${p.name} (คงเหลือ: ${p.stock})</option>`)
+          .join('');
+      
+      if (currentValue) {
+        select.value = currentValue;
+      }
+    }
+
+    function updateSaleInfo() {
+      const productId = document.getElementById('sale-product').value;
+      const quantity = parseInt(document.getElementById('sale-quantity').value) || 0;
+      const saleInfo = document.getElementById('sale-info');
+      
+      if (!productId || quantity === 0) {
+        saleInfo.style.display = 'none';
+        return;
+      }
+      
+      const product = products.find(p => p.id === productId);
+      if (!product) return;
+      
+      const totalPrice = product.price * quantity;
+      const totalCost = product.cost * quantity;
+      const profit = totalPrice - totalCost;
+      const remainingStock = product.stock - quantity;
+      
+      document.getElementById('info-price').textContent = `฿${product.price.toFixed(2)}`;
+      document.getElementById('info-total').textContent = `฿${totalPrice.toFixed(2)}`;
+      document.getElementById('info-profit').textContent = `฿${profit.toFixed(2)}`;
+      document.getElementById('info-stock').textContent = remainingStock;
+      
+      saleInfo.style.display = 'block';
+      
+      const quantityInput = document.getElementById('sale-quantity');
+      if (quantity > product.stock) {
+        quantityInput.setCustomValidity('จำนวนเกินสต๊อกที่มี');
+      } else {
+        quantityInput.setCustomValidity('');
+      }
+    }
+
+    async function handleSalesSubmit(event) {
+      event.preventDefault();
+      
+      const submitBtn = document.getElementById('sale-submit-btn');
+      const submitText = document.getElementById('sale-submit-text');
+      
+      submitBtn.disabled = true;
+      submitText.innerHTML = '<span class="loading"></span> กำลังบันทึก...';
+      
+      const productId = document.getElementById('sale-product').value;
+      const quantity = parseInt(document.getElementById('sale-quantity').value);
+      
+      const product = products.find(p => p.id === productId);
+      
+      if (quantity > product.stock) {
+        submitBtn.disabled = false;
+        submitText.textContent = 'บันทึกการขาย';
+        showToast('จำนวนเกินสต๊อกที่มี', 'error');
+        return;
+      }
+      
+      const totalPrice = product.price * quantity;
+      const totalCost = product.cost * quantity;
+      const profit = totalPrice - totalCost;
+      
+      const saleData = {
+        id: 'sale_' + Date.now(),
+        type: 'sale',
+        productId: product.id,
+        name: product.name,
+        quantity: quantity,
+        totalPrice: totalPrice,
+        totalCost: totalCost,
+        profit: profit,
+        saleDate: new Date().toISOString(),
+        createdAt: new Date().toISOString()
+      };
+      
+      // *** CHANGE: Use postData for Create Sale ***
+      const saleResult = await postData('create', saleData);
+      
+      if (saleResult.isOk) {
+        const updatedProduct = { ...product, stock: product.stock - quantity };
+        
+        // *** CHANGE: Use postData for Update Product Stock ***
+        const updateResult = await postData('update', updatedProduct);
+        
+        if (updateResult.isOk) {
+          document.getElementById('sales-form').reset();
+          document.getElementById('sale-info').style.display = 'none';
+          showToast('บันทึกการขายสำเร็จ', 'success');
+          await dataHandler.fetchData(); // *** NEW: Fetch data to update UI ***
+        } else {
+          showToast('เกิดข้อผิดพลาดในการอัปเดตสต๊อก', 'error');
+        }
+      } else {
+        showToast('เกิดข้อผิดพลาดในการบันทึกการขาย', 'error');
+      }
+      
+      submitBtn.disabled = false;
+      submitText.textContent = 'บันทึกการขาย';
+    }
+
+    function renderSalesTable() {
+      const tbody = document.getElementById('sales-table-body');
+      
+      const recentSales = [...sales]
+        .sort((a, b) => new Date(b.saleDate) - new Date(a.saleDate))
+        .slice(0, 30);
+      
+      if (recentSales.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="6" class="empty-state">
+              <div class="empty-state-icon">💰</div>
+              <div>ยังไม่มีการขาย</div>
+            </td>
+          </tr>
+        `;
+        return;
+      }
+      
+      tbody.innerHTML = recentSales.map(sale => {
+        const date = new Date(sale.saleDate);
+        const dateStr = date.toLocaleDateString('th-TH', { 
+          year: 'numeric', 
+          month: 'short', 
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit'
+        });
+        
+        return `
+          <tr>
+            <td>${dateStr}</td>
+            <td><strong>${sale.name}</strong></td>
+            <td>${sale.quantity}</td>
+            <td>฿${sale.totalPrice.toFixed(2)}</td>
+            <td>฿${sale.totalCost.toFixed(2)}</td>
+            <td style="color: #48bb78;"><strong>฿${sale.profit.toFixed(2)}</strong></td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    // Dashboard Functions
+    function renderDashboard() {
+      renderStats();
+      renderLowStockAlert();
+      renderSalesChart();
+      renderTopProducts();
+    }
+
+    function renderStats() {
+      const totalRevenue = sales.reduce((sum, sale) => sum + sale.totalPrice, 0);
+      const totalCost = sales.reduce((sum, sale) => sum + sale.totalCost, 0);
+      const totalProfit = totalRevenue - totalCost;
+      const totalSalesCount = sales.length;
+      
+      document.getElementById('total-revenue').textContent = `฿${totalRevenue.toFixed(2)}`;
+      document.getElementById('total-cost').textContent = `฿${totalCost.toFixed(2)}`;
+      document.getElementById('total-profit').textContent = `฿${totalProfit.toFixed(2)}`;
+      document.getElementById('total-sales-count').textContent = totalSalesCount;
+    }
+
+    function renderLowStockAlert() {
+      const lowStockProducts = products.filter(p => p.stock <= p.minStock);
+      const alertBox = document.getElementById('low-stock-alert');
+      const listDiv = document.getElementById('low-stock-list');
+      
+      if (lowStockProducts.length === 0) {
+        alertBox.style.display = 'none';
+        return;
+      }
+      
+      alertBox.style.display = 'block';
+      listDiv.innerHTML = lowStockProducts.map(p => 
+        `<div class="alert-item">📦 <strong>${p.name}</strong> - คงเหลือ ${p.stock} ชิ้น (ขั้นต่ำ ${p.minStock} ชิ้น)</div>`
+      ).join('');
+    }
+
+    function renderSalesChart() {
+      const ctx = document.getElementById('salesChart');
+      if (!ctx) return;
+      
+      const last30Days = [];
+      const today = new Date();
+      for (let i = 29; i >= 0; i--) {
+        const date = new Date(today);
+        date.setDate(date.getDate() - i);
+        last30Days.push(date.toISOString().split('T')[0]);
+      }
+      
+      const dailySales = last30Days.map(date => {
+        return sales
+          .filter(sale => sale.saleDate.startsWith(date))
+          .reduce((sum, sale) => sum + sale.totalPrice, 0);
+      });
+      
+      const labels = last30Days.map(date => {
+        const d = new Date(date);
+        return d.toLocaleDateString('th-TH', { day: 'numeric', month: 'short' });
+      });
+      
+      if (salesChart) {
+        salesChart.destroy();
+      }
+      
+      salesChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: 'ยอดขาย (฿)',
+            data: dailySales,
+            borderColor: '#4299e1',
+            backgroundColor: 'rgba(66, 153, 225, 0.1)',
+            tension: 0.4,
+            fill: true
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: true,
+          plugins: {
+            legend: {
+              display: true,
+              position: 'top'
+            }
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              ticks: {
+                callback: function(value) {
+                  return '฿' + value.toFixed(0);
+                }
+              }
+            }
+          }
+        }
+      });
+    }
+
+    function renderTopProducts() {
+      const tbody = document.getElementById('top-products-body');
+      
+      if (sales.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="6" class="empty-state">
+              <div class="empty-state-icon">📊</div>
+              <div>ยังไม่มีข้อมูลการขาย</div>
+            </td>
+          </tr>
+        `;
+        return;
+      }
+      
+      const productSales = {};
+      sales.forEach(sale => {
+        if (!productSales[sale.productId]) {
+          productSales[sale.productId] = {
+            name: sale.name,
+            quantity: 0,
+            revenue: 0,
+            profit: 0,
+            hasSales: true
+          };
+        }
+        productSales[sale.productId].quantity += sale.quantity;
+        productSales[sale.productId].revenue += sale.totalPrice;
+        productSales[sale.productId].profit += sale.profit;
+      });
+      
+      const topProducts = Object.entries(productSales)
+        .sort((a, b) => b[1].quantity - a[1].quantity)
+        .slice(0, 10);
+      
+      tbody.innerHTML = topProducts.map(([productId, data], index) => `
+        <tr>
+          <td><strong>${index + 1}</strong></td>
+          <td>${data.name}</td>
+          <td>${data.quantity}</td>
+          <td>฿${data.revenue.toFixed(2)}</td>
+          <td style="color: #48bb78;">฿${data.profit.toFixed(2)}</td>
+          <td><span class="badge badge-success">ขายแล้ว</span></td>
+        </tr>
+      `).join('');
+    }
+
+    // Export Functions
+    function exportToExcel() {
+      // สร้างข้อมูลสรุป
+      const totalRevenue = sales.reduce((sum, sale) => sum + sale.totalPrice, 0);
+      const totalCost = sales.reduce((sum, sale) => sum + sale.totalCost, 0);
+      const totalProfit = totalRevenue - totalCost;
+      
+      // สร้างเนื้อหา CSV
+      let csvContent = '\uFEFF'; // BOM for UTF-8
+      csvContent += 'รายงานสรุปยอดขาย\n\n';
+      csvContent += `วันที่สร้างรายงาน,${new Date().toLocaleDateString('th-TH')}\n\n`;
+      
+      // สรุปยอดรวม
+      csvContent += 'สรุปภาพรวม\n';
+      csvContent += 'รายการ,จำนวน\n';
+      csvContent += `รายรับรวม,${totalRevenue.toFixed(2)}\n`;
+      csvContent += `ต้นทุนรวม,${totalCost.toFixed(2)}\n`;
+      csvContent += `กำไรขั้นต้น,${totalProfit.toFixed(2)}\n`;
+      csvContent += `จำนวนรายการขาย,${sales.length}\n`;
+      csvContent += `จำนวนสินค้าทั้งหมด,${products.length}\n\n`;
+      
+      // รายการสินค้า
+      csvContent += 'รายการสินค้าคงเหลือ\n';
+      csvContent += 'ชื่อสินค้า,ราคาขาย,ต้นทุน,คงเหลือ,สต๊อกขั้นต่ำ,สถานะ\n';
+      products.forEach(product => {
+        const status = product.stock <= product.minStock ? 'สต๊อกต่ำ' : 'ปกติ';
+        csvContent += `${product.name},${product.price},${product.cost},${product.stock},${product.minStock},${status}\n`;
+      });
+      csvContent += '\n';
+      
+      // สินค้าขายดี
+      const productSales = {};
+      sales.forEach(sale => {
+        if (!productSales[sale.productId]) {
+          productSales[sale.productId] = {
+            name: sale.name,
+            quantity: 0,
+            revenue: 0,
+            profit: 0
+          };
+        }
+        productSales[sale.productId].quantity += sale.quantity;
+        productSales[sale.productId].revenue += sale.totalPrice;
+        productSales[sale.productId].profit += sale.profit;
+      });
+      
+      const topProducts = Object.entries(productSales)
+        .sort((a, b) => b[1].quantity - a[1].quantity)
+        .slice(0, 10);
+      
+      csvContent += 'สินค้าขายดี Top 10\n';
+      csvContent += 'ลำดับ,สินค้า,จำนวนขาย,ยอดขาย,กำไร\n';
+      topProducts.forEach(([id, data], index) => {
+        csvContent += `${index + 1},${data.name},${data.quantity},${data.revenue.toFixed(2)},${data.profit.toFixed(2)}\n`;
+      });
+      csvContent += '\n';
+      
+      // ประวัติการขาย
+      csvContent += 'ประวัติการขาย (30 วันล่าสุด)\n';
+      csvContent += 'วันที่,สินค้า,จำนวน,ยอดขาย,ต้นทุน,กำไร\n';
+      const recentSales = [...sales]
+        .sort((a, b) => new Date(b.saleDate) - new Date(a.saleDate))
+        .slice(0, 30);
+      
+      recentSales.forEach(sale => {
+        const date = new Date(sale.saleDate).toLocaleDateString('th-TH');
+        csvContent += `${date},${sale.name},${sale.quantity},${sale.totalPrice.toFixed(2)},${sale.totalCost.toFixed(2)},${sale.profit.toFixed(2)}\n`;
+      });
+      
+      // ดาวน์โหลดไฟล์
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      const fileName = `รายงานยอดขาย_${new Date().toLocaleDateString('th-TH').replace(/\//g, '-')}.csv`;
+      
+      link.setAttribute('href', url);
+      link.setAttribute('download', fileName);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      showToast('ส่งออกไฟล์ Excel สำเร็จ', 'success');
+    }
+
+    function exportToPDF() {
+      const totalRevenue = sales.reduce((sum, sale) => sum + sale.totalPrice, 0);
+      const totalCost = sales.reduce((sum, sale) => sum + sale.totalCost, 0);
+      const totalProfit = totalRevenue - totalCost;
+      
+      // สร้างหน้าต่างใหม่สำหรับพิมพ์
+      const printWindow = window.open('', '_blank');
+      
+      let htmlContent = `
+        <!DOCTYPE html>
+        <html lang="th">
+        <head>
+          <meta charset="UTF-8">
+          <title>รายงานสรุปยอดขาย</title>
+          <style>
+            body {
+              font-family: 'Sarabun', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+              margin: 40px;
+              color: #333;
+            }
+            h1 {
+              text-align: center;
+              color: #2d3748;
+              margin-bottom: 10px;
+            }
+            .report-date {
+              text-align: center;
+              color: #718096;
+              margin-bottom: 30px;
+            }
+            .summary-box {
+              background: #f7fafc;
+              border: 2px solid #e2e8f0;
+              border-radius: 8px;
+              padding: 20px;
+              margin-bottom: 30px;
+            }
+            .summary-grid {
+              display: grid;
+              grid-template-columns: repeat(2, 1fr);
+              gap: 15px;
+            }
+            .summary-item {
+              display: flex;
+              justify-content: space-between;
+              padding: 10px;
+              background: white;
+              border-radius: 6px;
+            }
+            .summary-label {
+              font-weight: bold;
+              color: #4a5568;
+            }
+            .summary-value {
+              color: #2d3748;
+              font-weight: bold;
+            }
+            .profit {
+              color: #48bb78;
+            }
+            h2 {
+              color: #2d3748;
+              border-bottom: 2px solid #4299e1;
+              padding-bottom: 10px;
+              margin-top: 30px;
+              margin-bottom: 20px;
+            }
+            table {
+              width: 100%;
+              border-collapse: collapse;
+              margin-bottom: 30px;
+            }
+            th {
+              background: #2d3748;
+              color: white;
+              padding: 12px;
+              text-align: left;
+              font-weight: bold;
+            }
+            td {
+              padding: 10px 12px;
+              border-bottom: 1px solid #e2e8f0;
+            }
+            tr:hover {
+              background: #f7fafc;
+            }
+            .status-low {
+              color: #e53e3e;
+              font-weight: bold;
+            }
+            .status-ok {
+              color: #48bb78;
+              font-weight: bold;
+            }
+            @media print {
+              body {
+                margin: 20px;
+              }
+              button {
+                display: none;
+              }
+            }
+            .print-btn {
+              background: #4299e1;
+              color: white;
+              border: none;
+              padding: 12px 24px;
+              border-radius: 6px;
+              font-size: 16px;
+              cursor: pointer;
+              margin: 20px auto;
+              display: block;
+            }
+            .print-btn:hover {
+              background: #3182ce;
+            }
+          </style>
+        </head>
+        <body>
+          <h1>📊 รายงานสรุปยอดขาย</h1>
+          <p class="report-date">วันที่สร้างรายงาน: ${new Date().toLocaleDateString('th-TH', { 
+            year: 'numeric', 
+            month: 'long', 
+            day: 'numeric' 
+          })}</p>
+          
+          <div class="summary-box">
+            <h2 style="margin-top: 0; border: none;">สรุปภาพรวม</h2>
+            <div class="summary-grid">
+              <div class="summary-item">
+                <span class="summary-label">💰 รายรับรวม:</span>
+                <span class="summary-value">฿${totalRevenue.toFixed(2)}</span>
+              </div>
+              <div class="summary-item">
+                <span class="summary-label">💵 ต้นทุนรวม:</span>
+                <span class="summary-value">฿${totalCost.toFixed(2)}</span>
+              </div>
+              <div class="summary-item">
+                <span class="summary-label">💎 กำไรขั้นต้น:</span>
+                <span class="summary-value profit">฿${totalProfit.toFixed(2)}</span>
+              </div>
+              <div class="summary-item">
+                <span class="summary-label">📋 จำนวนรายการขาย:</span>
+                <span class="summary-value">${sales.length} รายการ</span>
+              </div>
+              <div class="summary-item">
+                <span class="summary-label">📦 จำนวนสินค้าทั้งหมด:</span>
+                <span class="summary-value">${products.length} รายการ</span>
+              </div>
+            </div>
+          </div>
+      `;
+      
+      // ตารางสินค้าคงเหลือ
+      htmlContent += `
+          <h2>📦 รายการสินค้าคงเหลือ</h2>
+          <table>
+            <thead>
+              <tr>
+                <th>ชื่อสินค้า</th>
+                <th>ราคาขาย</th>
+                <th>ต้นทุน</th>
+                <th>คงเหลือ</th>
+                <th>สต๊อกขั้นต่ำ</th>
+                <th>สถานะ</th>
+              </tr>
+            </thead>
+            <tbody>
+      `;
+      
+      products.forEach(product => {
+        const isLowStock = product.stock <= product.minStock;
+        htmlContent += `
+              <tr>
+                <td><strong>${product.name}</strong></td>
+                <td>฿${product.price.toFixed(2)}</td>
+                <td>฿${product.cost.toFixed(2)}</td>
+                <td>${product.stock}</td>
+                <td>${product.minStock}</td>
+                <td class="${isLowStock ? 'status-low' : 'status-ok'}">
+                  ${isLowStock ? '⚠️ สต๊อกต่ำ' : '✅ ปกติ'}
+                </td>
+              </tr>
+        `;
+      });
+      
+      htmlContent += `
+            </tbody>
+          </table>
+      `;
+      
+      // สินค้าขายดี Top 10
+      const productSales = {};
+      sales.forEach(sale => {
+        if (!productSales[sale.productId]) {
+          productSales[sale.productId] = {
+            name: sale.name,
+            quantity: 0,
+            revenue: 0,
+            profit: 0
+          };
+        }
+        productSales[sale.productId].quantity += sale.quantity;
+        productSales[sale.productId].revenue += sale.totalPrice;
+        productSales[sale.productId].profit += sale.profit;
+      });
+      
+      const topProducts = Object.entries(productSales)
+        .sort((a, b) => b[1].quantity - a[1].quantity)
+        .slice(0, 10);
+      
+      if (topProducts.length > 0) {
+        htmlContent += `
+          <h2>🏆 สินค้าขายดี Top 10</h2>
+          <table>
+            <thead>
+              <tr>
+                <th>ลำดับ</th>
+                <th>สินค้า</th>
+                <th>จำนวนขาย</th>
+                <th>ยอดขาย</th>
+                <th>กำไร</th>
+              </tr>
+            </thead>
+            <tbody>
+        `;
+        
+        topProducts.forEach(([id, data], index) => {
+          htmlContent += `
+              <tr>
+                <td><strong>${index + 1}</strong></td>
+                <td>${data.name}</td>
+                <td>${data.quantity}</td>
+                <td>฿${data.revenue.toFixed(2)}</td>
+                <td class="profit">฿${data.profit.toFixed(2)}</td>
+              </tr>
+          `;
+        });
+        
+        htmlContent += `
+            </tbody>
+          </table>
+        `;
+      }
+      
+      // ประวัติการขาย
+      const recentSales = [...sales]
+        .sort((a, b) => new Date(b.saleDate) - new Date(a.saleDate))
+        .slice(0, 30);
+      
+      if (recentSales.length > 0) {
+        htmlContent += `
+          <h2>💰 ประวัติการขาย (30 วันล่าสุด)</h2>
+          <table>
+            <thead>
+              <tr>
+                <th>วันที่</th>
+                <th>สินค้า</th>
+                <th>จำนวน</th>
+                <th>ยอดขาย</th>
+                <th>ต้นทุน</th>
+                <th>กำไร</th>
+              </tr>
+            </thead>
+            <tbody>
+        `;
+        
+        recentSales.forEach(sale => {
+          const date = new Date(sale.saleDate);
+          const dateStr = date.toLocaleDateString('th-TH', {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+          });
+          
+          htmlContent += `
+              <tr>
+                <td>${dateStr}</td>
+                <td><strong>${sale.name}</strong></td>
+                <td>${sale.quantity}</td>
+                <td>฿${sale.totalPrice.toFixed(2)}</td>
+                <td>฿${sale.totalCost.toFixed(2)}</td>
+                <td class="profit">฿${sale.profit.toFixed(2)}</td>
+              </tr>
+          `;
+        });
+        
+        htmlContent += `
+            </tbody>
+          </table>
+        `;
+      }
+      
+      htmlContent += `
+          <button class="print-btn" onclick="window.print()">🖨️ พิมพ์รายงาน / บันทึกเป็น PDF</button>
+        </body>
+        </html>
+      `;
+      
+      printWindow.document.write(htmlContent);
+      printWindow.document.close();
+      
+      showToast('เปิดหน้าต่างรายงาน PDF สำเร็จ', 'success');
+    }
+
+    // Search Functions
+    function searchProducts() {
+      const searchTerm = document.getElementById('search-product').value.toLowerCase().trim();
+      const resultsDiv = document.getElementById('search-results');
+      
+      if (!searchTerm) {
+        filteredProducts = [];
+        resultsDiv.textContent = '';
+        renderProductsTable();
+        return;
+      }
+      
+      filteredProducts = products.filter(product => 
+        product.name.toLowerCase().includes(searchTerm)
+      );
+      
+      resultsDiv.textContent = `พบสินค้า ${filteredProducts.length} รายการจากทั้งหมด ${products.length} รายการ`;
+      renderProductsTable();
+    }
+
+    function clearSearch() {
+      document.getElementById('search-product').value = '';
+      filteredProducts = [];
+      document.getElementById('search-results').textContent = '';
+      renderProductsTable();
+    }
+
+    // Toast Notification
+    function showToast(message, type = 'success') {
+      const toast = document.createElement('div');
+      toast.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        padding: 1rem 1.5rem;
+        background: ${type === 'success' ? '#48bb78' : '#f56565'};
+        color: white;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        z-index: 10000;
+        animation: slideIn 0.3s ease-out;
+      `;
+      toast.textContent = message;
+      
+      document.body.appendChild(toast);
+      
+      setTimeout(() => {
+        toast.style.animation = 'slideOut 0.3s ease-out';
+        setTimeout(() => toast.remove(), 300);
+      }, 3000);
+    }
+
+    // Initialize on load
+    initApp();
+  </script>
+ </body>
+</html>
